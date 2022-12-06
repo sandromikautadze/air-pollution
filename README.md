@@ -10,4 +10,4 @@ This repository contains all the files for the project in *Mathematical Statisti
 
 ## Authors
 
-Me and [Gio](https://github.com/giovanni-demuri)
+[Sandro](https://github.com/sandromikautadze) and [Gio](https://github.com/giovanni-demuri)
