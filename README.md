@@ -5,5 +5,9 @@ This repository contains all the files for the project in *Mathematical Statisti
 ## Structure
 
 -   **data** contains the datasets, both in the raw and clean formats
--   **output-graphics** contains all the images (plots, graphs, etc.) used in the project
+-   **output-graphics** contains all the images (plots, graphs, etc.) used in the cleaning and in the analysis phase
 -   **src** contains the source code
+
+## Authors
+
+Me and [Gio](https://github.com/giovanni-demuri)
