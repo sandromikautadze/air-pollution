@@ -24,7 +24,6 @@ colnames(bap) == colnames(so2)
 ## all true
 
 # bar char for the frequencies of the countries
-par(mfrow = c(3,3))
 plot_bar(pm10$Country, title = "PM10")
 plot_bar(pm25$Country, title = "PM2.5")
 plot_bar(o3$Country, title = "O3")
@@ -59,40 +58,100 @@ ita_pm10 <- change_col(ita_pm10)
 ita_pm25 <- change_col(ita_pm25)
 ita_so2 <- change_col(ita_so2)
 
+dim(ita_bap) # 144 12
+dim(ita_no2) # 603 12
+dim(ita_o3) # 340 12
+dim(ita_pm10) # 525 12
+dim(ita_pm25) # 269 12
+dim(ita_so2) # 224 12
 # we will select pm10, pm2.5, o3, no2 since we have more data
 remove(ita_bap, ita_so2)
 
+# CORRELATION MATRIX ----------
+
+# for numerical columns only
+# auxiliary function which makes a correlation matrix as dataframe
+cor_df <- function(df){
+  corr <- df %>%
+    select(where(is.numeric)) %>% 
+    cor(use = "pairwise.complete.obs") %>% 
+    round(3) %>% 
+    as_tibble(rownames = "variable")
+  return(corr)
+}
+
+cor_df(ita_pm10)
+cor_df(ita_pm25)
+cor_df(ita_o3)
+cor_df(ita_no2)
+
+
+# for the whole dataset
+plot_correlation(ita_pm10, title = "PM10")
+plot_correlation(ita_pm25, title = "PM2.5")
+plot_correlation(ita_o3, title = "O3")
+plot_correlation(ita_no2, title = "NO2")
 
 # PLOTS-------
 
+## POLLUTION FOR EACH POLLUTANT ---------------
 # PM10 plot
 plot_pm10 <- ita_pm10 %>%
     ggplot(aes(x = Longitude, y = Latitude, colour = AirPollutionLevel)) +
     geom_point() +
     scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
-    labs(title = "PM10")
+    labs(title = "PM10 [ug/m3]")
 
 # PM25 plot
 plot_pm25 <- ita_pm25 %>%
   ggplot(aes(x = Longitude, y = Latitude, colour = AirPollutionLevel)) +
   geom_point() +
   scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
-  labs(title = "PM25")
+  labs(title = "PM2.5 [ug/m3]")
 
 # O3 plot
 plot_o3 <- ita_o3 %>%
   ggplot(aes(x = Longitude, y = Latitude, colour = AirPollutionLevel)) +
   geom_point() +
   scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
-  labs(title = "O3")
+  labs(title = "O3 [ug/m3]")
 
 # NO2 plot
 plot_no2 <- ita_no2 %>%
   ggplot(aes(x = Longitude, y = Latitude, colour = AirPollutionLevel)) +
   geom_point() +
   scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
-  labs(title = "NO2")
+  labs(title = "NO2 [ug/m3]")
 
-
-# POLLUTION FOR EACH POLLUTANT
 grid.arrange(plot_pm10, plot_pm25, plot_o3, plot_no2, nrow = 2)
+remove(plot_pm10, plot_pm25, plot_o3, plot_no2)
+
+#CHECK CORRELATION COEFFICIENTS!
+
+
+# to use latitude and longitude for linear regression we want to check wheter they're normal or not
+
+## AIR POLLUTION LEVEL --------
+par(mfrow = c(2,3))
+hist(ita_pm10$AirPollutionLevel, xlab = "PM10 / [ug/m3]", main = "")
+boxplot(ita_pm10$AirPollutionLevel, main = "Air Pollution PM10")
+qqnorm(ita_pm10$AirPollutionLevel, main = "")
+qqline(ita_pm10$AirPollutionLevel, col = "blue", lwd = 0.5)
+hist(ita_pm25$AirPollutionLevel, xlab = "PM2.5 / [ug/m3]", main = "")
+boxplot(ita_pm25$AirPollutionLevel, main = "Air Pollution PM2.5")
+qqnorm(ita_pm25$AirPollutionLevel, main = "")
+qqline(ita_pm25$AirPollutionLevel, col = "blue", lwd = 0.5)
+par(mfrow = c(2,3))
+hist(ita_o3$AirPollutionLevel, xlab = "O3 / [ug/m3]", main = "")
+boxplot(ita_o3$AirPollutionLevel, main = "Air Pollution O3")
+qqnorm(ita_o3$AirPollutionLevel, main = "")
+qqline(ita_o3$AirPollutionLevel, col = "blue", lwd = 0.5)
+hist(ita_no2$AirPollutionLevel, xlab = "NO2 / [ug/m3]", main = "")
+boxplot(ita_no2$AirPollutionLevel, main = "Air Pollution NO2")
+qqnorm(ita_no2$AirPollutionLevel, main = "")
+qqline(ita_no2$AirPollutionLevel, col = "blue", lwd = 0.5)
+
+
+
+
+
