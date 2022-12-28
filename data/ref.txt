@@ -2,3 +2,27 @@ Sources
 
 -> 2018 data -EU values
 	https://www.eea.europa.eu/data-and-maps/data/air-pollutant-concentrations-at-station - "Air pollutant concentrations 2018 (compared to EU values)", last visited December 2nd, 2022
+	
+-> GS's Causes and Consequences of Air Pollution
+	Consequences
+		Total deaths: https://data.worldbank.org/indicator/SP.DYN.CDRT.IN
+		Birth mortality: https://data.worldbank.org/indicator/SP.DYN.IMRT.IN
+		Life expectancy: https://data.worldbank.org/indicator/SP.DYN.LE00.IN
+		Cardiovascular diseases: https://ourworldindata.org/cancer
+		Lower respiratory infections: https://ourworldindata.org/cancer
+		Chronic respiratory diseases: https://ourworldindata.org/cancer
+		Tracheal, bronchus, and lung cancer: https://ourworldindata.org/cancer
+
+	Causes
+		Total population: https://data.worldbank.org/indicator/SP.POP.TOTL?end=2021&start=1960
+		Population density: https://data.worldbank.org/indicator/EN.POP.DNST
+		GDP: https://data.worldbank.org/indicator/NY.GDP.MKTP.CD
+		GDP per capita: https://data.worldbank.org/indicator/NY.GDP.PCAP.PP.CD
+		Renewable energy consumption: https://data.worldbank.org/indicator/EG.FEC.RNEW.ZS?view=chart
+		Industry VA: https://data.worldbank.org/indicator/NV.IND.TOTL.ZS?name_desc=false
+		Agiculture VA: https://data.worldbank.org/indicator/NV.AGR.TOTL.ZS?view=chart
+		Forest area: https://data.worldbank.org/indicator/AG.LND.FRST.K2
+		Primary energy consumption: https://ourworldindata.org/energy-production-consumption
+		Primary energy consumption per capita: https://ourworldindata.org/energy-production-consumption
+	
+	
