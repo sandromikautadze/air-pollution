@@ -7,6 +7,7 @@ library(DataExplorer)
 library(mapview)
 library(gridExtra) #grid.arrange function
 library(mosaic) #derivedFactor function
+library(corrplot)
 
 # importing data
 pm10 <- read_excel("data/2018 data -EU values.xlsx", sheet = "PM10", skip = 6)
@@ -193,4 +194,61 @@ write.csv(ita_o3, "data/cleaned/Ita-O3.csv")
 write.csv(ita_no2, "data/cleaned/Ita-NO2.csv")
 write.csv(ita_pm25, "data/cleaned/Ita-PM25.csv")
 
-# NEW DATASET TO BE ADDED
+
+# Causes and Effects Data -----
+
+# for each country we construct the average air pollution level
+avg_pollution_level <- function(df){
+  df_avg <- df %>% group_by(Country) %>% 
+    summarise(avg_pollution_level = mean(AirPollutionLevel, na.rm = TRUE))
+  return(df_avg)
+}
+pm10_avg <- avg_pollution_level(pm10)
+pm25_avg <- avg_pollution_level(pm25)
+o3_avg <- avg_pollution_level(o3)
+no2_avg <- avg_pollution_level(no2)
+
+# merging data sets with average value 
+df1 <- merge(pm10_avg, no2_avg, by = "Country") %>% 
+  rename(pm10_avg = avg_pollution_level.x,
+         no2_avg = avg_pollution_level.y)
+df2 <- merge(df1, o3_avg, all = TRUE) %>% 
+  rename(o3_avg = avg_pollution_level)
+avg_final <- merge(df2, pm25_avg, all = TRUE) %>% 
+  rename(pm25_avg = avg_pollution_level)
+remove(df1, df2, pm10_avg, pm25_avg, no2_avg, o3_avg, pm10, pm25, no2, o3)
+
+# importing Causes ----
+causes_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
+                     sheet = "causes")
+
+# changing Slovak Republic to Slovakia in causes to match to avg_final row name
+causes_nonclean$Country[causes_nonclean$Country == "Slovak Republic"] <- "Slovakia"
+
+causes <- merge(causes_nonclean, avg_final, by = "Country")
+remove(causes_nonclean)
+
+#replacing NA in GDP per capita column for Andorra row
+causes$`GDP per capita, PPP (current  international $)`[is.na(causes$`GDP per capita, PPP (current  international $)`)] <- 42903.44
+
+#correlation matrix causes (converted to data frame)
+cor_causes <- causes %>% 
+  select(where(is.numeric)) %>%
+  cor(use = "pairwise.complete.obs") %>%
+  round(3) %>% 
+  as_tibble(rownames = "variable")
+
+
+# importing Effects ----
+effects_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
+                              sheet = "consequences")
+effects <- merge(effects_nonclean, avg_final, by = "Country")
+remove(effects_nonclean, avg_final)
+
+
+#correlation matrix causes (converted to data frame)
+cor_effects <- effects %>% 
+  select(where(is.numeric)) %>%
+  cor(use = "pairwise.complete.obs") %>%
+  round(3) %>% 
+  as_tibble(rownames = "variable")
