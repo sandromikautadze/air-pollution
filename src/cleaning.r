@@ -7,7 +7,6 @@ library(DataExplorer)
 library(mapview)
 library(gridExtra) #grid.arrange function
 library(mosaic) #derivedFactor function
-library(corrplot)
 
 # importing data
 pm10 <- read_excel("data/2018 data -EU values.xlsx", sheet = "PM10", skip = 6)
@@ -42,6 +41,7 @@ pm10 <- change_col(pm10)
 pm25 <- change_col(pm25)
 so2 <- change_col(so2)
 
+# visualize the location of the data
 mapview(pm10, xcol = "Longitude", ycol = "Latitude", crs = 4269, grid = FALSE)
 mapview(pm25, xcol = "Longitude", ycol = "Latitude", crs = 4269, grid = FALSE)
 mapview(o3, xcol = "Longitude", ycol = "Latitude", crs = 4269, grid = FALSE)
@@ -75,38 +75,10 @@ dim(ita_so2) # 224 12
 
 # we will select pm10, pm2.5, o3, no2 since we have more data
 remove(ita_bap, ita_so2)
-# and remove the inital datasets as they're now useless
-remove(pm10, pm25, no2, o3, bap, so2)
+# and remove some initial datasets as they're now useless
+remove(bap, so2)
 
-# CORRELATION MATRIX ----------
-
-plot_correlation(ita_pm10, title = "Italy, PM10")
-plot_correlation(ita_pm25, title = "Italy, PM2.5")
-plot_correlation(ita_o3, title = "Italy, O3")
-plot_correlation(ita_no2, title = "Italy, NO2")
-
-# ## AIR POLLUTION LEVEL DISTRIBUTION--------
-# # checking normality
-# par(mfrow = c(2,3))
-# hist(ita_pm10$AirPollutionLevel, xlab = "PM10 / [ug/m3]", main = "")
-# boxplot(ita_pm10$AirPollutionLevel, main = "Air Pollution PM10")
-# qqnorm(ita_pm10$AirPollutionLevel, main = "")
-# qqline(ita_pm10$AirPollutionLevel, col = "blue", lwd = 0.5)
-# hist(ita_pm25$AirPollutionLevel, xlab = "PM2.5 / [ug/m3]", main = "")
-# boxplot(ita_pm25$AirPollutionLevel, main = "Air Pollution PM2.5")
-# qqnorm(ita_pm25$AirPollutionLevel, main = "")
-# qqline(ita_pm25$AirPollutionLevel, col = "blue", lwd = 0.5)
-# par(mfrow = c(2,3))
-# hist(ita_o3$AirPollutionLevel, xlab = "O3 / [ug/m3]", main = "")
-# boxplot(ita_o3$AirPollutionLevel, main = "Air Pollution O3")
-# qqnorm(ita_o3$AirPollutionLevel, main = "")
-# qqline(ita_o3$AirPollutionLevel, col = "blue", lwd = 0.5)
-# hist(ita_no2$AirPollutionLevel, xlab = "NO2 / [ug/m3]", main = "")
-# boxplot(ita_no2$AirPollutionLevel, main = "Air Pollution NO2")
-# qqnorm(ita_no2$AirPollutionLevel, main = "")
-# qqline(ita_no2$AirPollutionLevel, col = "blue", lwd = 0.5)
-
-#removing unnecessary variables
+# keeping only necessary variables
 ita_pm10 <- ita_pm10 %>% 
   select(c(AirPollutionLevel, Longitude, Latitude))
 ita_pm25 <- ita_pm25 %>% 
@@ -115,6 +87,13 @@ ita_o3 <- ita_o3 %>%
   select(c(AirPollutionLevel, Longitude, Latitude))
 ita_no2 <- ita_no2 %>% 
   select(c(AirPollutionLevel, Longitude, Latitude))
+
+# Distribution of Air Pollution in Italy ----------
+par(mfrow = c(2,2))
+boxplot(ita_pm10$AirPollutionLevel, main = "PM10 [ug/m3]")
+boxplot(ita_pm25$AirPollutionLevel, main = "PM2.5 [ug/m3]")
+boxplot(ita_o3$AirPollutionLevel, main = "O3 [ug/m3]")
+boxplot(ita_no2$AirPollutionLevel, main = "NO2 [ug/m3]")
 
 # classifying observation based on North, Center, South
 ita_pm10 <- ita_pm10 %>% mutate(
@@ -154,9 +133,9 @@ ita_o3 <- ita_o3 %>% mutate(
   )
 )
 
-## POLLUTION FOR EACH POLLUTANT ---------------
-# PM10 plot
+## PLOT POLLUTION FOR EACH POLLUTANT ---------------
 
+# PM10 plot
 plot_pm10 <- ita_pm10 %>%
   ggplot(aes(x = Longitude, y = Latitude, colour = AirPollutionLevel, shape = Zone)) +
   geom_point() +
@@ -187,17 +166,17 @@ plot_no2 <- ita_no2 %>%
 grid.arrange(plot_pm10, plot_pm25, plot_o3, plot_no2, nrow = 2)
 remove(plot_pm10, plot_pm25, plot_o3, plot_no2)
 
-
 # saving cleaned data
 write.csv(ita_pm10, "data/cleaned/Ita-PM10.csv")
 write.csv(ita_o3, "data/cleaned/Ita-O3.csv")
 write.csv(ita_no2, "data/cleaned/Ita-NO2.csv")
 write.csv(ita_pm25, "data/cleaned/Ita-PM25.csv")
 
+remove(ita_pm10, ita_pm25, ita_o3, ita_no2)
 
 # Causes and Effects Data -----
 
-# for each country we construct the average air pollution level
+# for each country we calculate the average air pollution level
 avg_pollution_level <- function(df){
   df_avg <- df %>% group_by(Country) %>% 
     summarise(avg_pollution_level = mean(AirPollutionLevel, na.rm = TRUE))
@@ -218,6 +197,29 @@ avg_final <- merge(df2, pm25_avg, all = TRUE) %>%
   rename(pm25_avg = avg_pollution_level)
 remove(df1, df2, pm10_avg, pm25_avg, no2_avg, o3_avg, pm10, pm25, no2, o3)
 
+## AVERAGE AIR POLLUTION LEVEL DISTRIBUTION--------
+# checking normality
+par(mfrow = c(2,3))
+hist(avg_final$pm10_avg, xlab = "PM10 / [ug/m3]", main = "")
+boxplot(avg_final$pm10_avg, main = "Air Pollution PM10")
+qqnorm(avg_final$pm10_avg, main = "")
+qqline(avg_final$pm10_avg, col = "blue", lwd = 0.5)
+hist(avg_final$pm25_avg, xlab = "PM2.5 / [ug/m3]", main = "")
+boxplot(avg_final$pm25_avg, main = "Air Pollution PM2.5")
+qqnorm(avg_final$pm25_avg, main = "")
+qqline(avg_final$pm25_avg, col = "blue", lwd = 0.5)
+par(mfrow = c(2,3))
+hist(avg_final$o3_avg, xlab = "O3 / [ug/m3]", main = "")
+boxplot(avg_final$o3_avg, main = "Air Pollution O3")
+qqnorm(avg_final$o3_avg, main = "")
+qqline(avg_final$o3_avg, col = "blue", lwd = 0.5)
+hist(avg_final$no2_avg, xlab = "NO2 / [ug/m3]", main = "")
+boxplot(avg_final$no2_avg, main = "Air Pollution NO2")
+qqnorm(avg_final$no2_avg, main = "")
+qqline(avg_final$no2_avg, col = "blue", lwd = 0.5)
+
+# try box cox with PM10 and O3
+
 # importing Causes ----
 causes_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
                      sheet = "causes")
@@ -231,13 +233,8 @@ remove(causes_nonclean)
 #replacing NA in GDP per capita column for Andorra row
 causes$`GDP per capita, PPP (current  international $)`[is.na(causes$`GDP per capita, PPP (current  international $)`)] <- 42903.44
 
-#correlation matrix causes (converted to data frame)
-cor_causes <- causes %>% 
-  select(where(is.numeric)) %>%
-  cor(use = "pairwise.complete.obs") %>%
-  round(3) %>% 
-  as_tibble(rownames = "variable")
-
+write.csv(causes, "data/cleaned/Europe-Causes.csv")
+remove(causes, cor_causes)
 
 # importing Effects ----
 effects_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
@@ -245,10 +242,5 @@ effects_nonclean <- read_excel("data/GS's Causes and Consequences of Air Polluti
 effects <- merge(effects_nonclean, avg_final, by = "Country")
 remove(effects_nonclean, avg_final)
 
-
-#correlation matrix causes (converted to data frame)
-cor_effects <- effects %>% 
-  select(where(is.numeric)) %>%
-  cor(use = "pairwise.complete.obs") %>%
-  round(3) %>% 
-  as_tibble(rownames = "variable")
+write.csv(effects, "data/cleaned/Europe-Effects.csv")
+remove(effects, cor_effects)
