@@ -1,7 +1,12 @@
 # STATISTICAL ANALYSIS
 
 library(tidyverse)
-library(broom)
+library(broom) # tidy
+library(olsrr) 
+
+# HP Testing ----
+# Is there enough statistical evidence to show that Italy's pollution levels
+# exceed the EU guidelines? What about the North, Center and South of Italy?
 
 # importing cleaned data
 PM10 <- read_csv("data/cleaned/Ita-PM10.csv") %>% select(-1)
@@ -9,16 +14,10 @@ PM25 <- read_csv("data/cleaned/Ita-PM25.csv") %>% select(-1)
 O3 <- read_csv("data/cleaned/Ita-O3.csv") %>% select(-1)
 NO2 <- read_csv("data/cleaned/Ita-NO2.csv") %>% select(-1)
 
-
-# ----
-# Is there enough statistical evidence to show that Italy's pollution levels
-# exceed the EU guidelines? What about the North, Center and South of Italy?
-
 # Let mu0 be the EU reference guideline for a specific pollutant 
 # H0: mu <= mu0 vs H1 : mu > mu0, T-test, alpha0 = 0.05
 
 # Entire Italy 
-
 test <- function(df, mu0){
   tt <- t.test(df$AirPollutionLevel,
          alternative = "greater",
@@ -101,12 +100,360 @@ summary_no2 <- cbind(zones,
                     rbind(tidy(tt_no2_north), tidy(tt_no2_center), tidy(tt_no2_south)),
                     result)
 
-remove(tt_no2_north, tt_no2_center, tt_no2_south, no2_north, no2_center, no2_south)
+remove(tt_no2_north, tt_no2_center, tt_no2_south, no2_north, no2_center, no2_south,
+       pollutant, res_o3, result, zones, test, PM10, PM25, NO2, O3)
 
+# the necessary results are in the files left so far, that is
+# summary_italy, summary_no2, summary_o3, summary_pm10, summary_pm25
+remove(summary_italy, summary_no2, summary_o3, summary_pm10, summary_pm25)
+
+
+#------------------------REGRESSIONS
 
 # Causes vs Air Pollution Levels ----
-##
+
+# importing cleaned data
+causes <- read_csv("data/cleaned/Europe-Causes.csv") %>% select(-1)
+
+#correlation matrix causes (converted to data frame)
+cor_causes <- causes %>% 
+  select(where(is.numeric)) %>%
+  cor(use = "pairwise.complete.obs") %>%
+  round(3) %>% 
+  as_tibble(rownames = "variable") %>% 
+  select(variable, pm10_avg, pm25_avg, o3_avg, no2_avg) %>% 
+  head(10)
+
+
+# Linear Regression
+
+## PM10 ----
+# remove missing values and select main columns
+causes_pm10 <- causes %>% select(-c(Country, no2_avg, o3_avg, pm25_avg)) %>% na.omit()
+
+# take log of pm10
+par(mfrow = c(2,3))
+hist(causes_pm10$pm10_avg, xlab = "PM10 / [ug/m3]", main = "")
+boxplot(causes_pm10$pm10_avg, main = "avg_pm10 distribution")
+qqnorm(causes_pm10$pm10_avg, main = "")
+qqline(causes_pm10$pm10_avg, col = "blue", lwd = 0.5)
+hist(log(causes_pm10$pm10_avg), xlab = "PM10 / [ug/m3]", main = "")
+boxplot(log(causes_pm10$pm10_avg), main = "log(avg_pm10) distribution")
+qqnorm(log(causes_pm10$pm10_avg), main = "")
+qqline(log(causes_pm10$pm10_avg), col = "blue", lwd = 0.5)
+
+causes_pm10$pm10_avg <- log(causes_pm10$pm10_avg)
+
+# all variables (F-test)
+model_ftest <- lm(pm10_avg ~ ., data = causes_pm10)
+summary(model_ftest)
+
+# Step-Down
+model_stepdown <- ols_step_backward_p(model_ftest,
+                                      prem = 0.05,
+                                      progress = TRUE,
+                                      details = TRUE)
+par(mfrow = c(1, 3))
+plot(model_stepdown$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepdown$rsquare, xlab = "Step", ylab = "R^2", main = "Step-down procedure PM10", type = "b", col = "blue")
+plot(model_stepdown$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepdown$model)
+
+# Step-Up
+model_stepup <- ols_step_forward_p(model_ftest,
+                                   penter = 0.05,
+                                   progress = TRUE,
+                                   details = TRUE)
+
+par(mfrow = c(1, 3))
+plot(model_stepup$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepup$rsquare, xlab = "Step", ylab = "R^2", main = "Step-up procedure PM10", type = "b", col = "blue")
+plot(model_stepup$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepup$model)
+
+# AIC and BIC
+AIC(model_ftest, model_stepdown$model, model_stepup$model)
+BIC(model_ftest, model_stepdown$model, model_stepup$model)
+
+# Step-down and step-up both give the same optimal model
+model_causes_pm10 <- model_stepdown
+remove(model_ftest, model_stepdown, model_stepup)
+
+### Regression Diagnostic ----
+
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model_causes_pm10$model$residuals, main = "", xlab = "PM10 Residuals")
+qqnorm(model_causes_pm10$model$residuals, main = "")
+qqline(model_causes_pm10$model$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model_causes_pm10$model$residuals) 
+#Homoscedasticity of residuals
+ols_plot_resid_fit(model_causes_pm10$model, print_plot = TRUE)
+ols_test_f(model_causes_pm10$model)
+# https://olsrr.rsquaredacademy.com/articles/heteroskedasticity.html#f-test
+
+remove(causes_pm10, model_causes_pm10)
+
+## PM2.5 ----
+
+causes_pm25 <- causes %>% select(-c(Country, no2_avg, o3_avg, pm10_avg)) %>% na.omit()
+
+# all variables (F-test)
+model_ftest <- lm(pm25_avg ~ ., data = causes_pm25)
+summary(model_ftest)
+
+# Step-Down
+model_stepdown <- ols_step_backward_p(model_ftest,
+                                      prem = 0.05,
+                                      progress = TRUE,
+                                      details = TRUE)
+par(mfrow = c(1, 3))
+plot(model_stepdown$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepdown$rsquare, xlab = "Step", ylab = "R^2", main = "Step-down procedure PM2.5", type = "b", col = "blue")
+plot(model_stepdown$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepdown$model)
+
+# Step-Up
+model_stepup <- ols_step_forward_p(model_ftest,
+                                   penter = 0.05,
+                                   progress = TRUE,
+                                   details = TRUE)
+
+par(mfrow = c(1, 3))
+plot(model_stepup$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepup$rsquare, xlab = "Step", ylab = "R^2", main = "Step-up procedure PM2.5", type = "b", col = "blue")
+plot(model_stepup$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepup$model)
+
+# AIC and BIC
+AIC(model_ftest, model_stepdown$model, model_stepup$model)
+BIC(model_ftest, model_stepdown$model, model_stepup$model)
+
+# Step-down and step-up both give the same optimal model
+model_causes_pm25 <- model_stepdown
+remove(model_ftest, model_stepdown, model_stepup)
+
+### Regression Diagnostic ----
+
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model_causes_pm25$model$residuals, main = "", xlab = "PM2.5 Residuals")
+qqnorm(model_causes_pm25$model$residuals, main = "")
+qqline(model_causes_pm25$model$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model_causes_pm25$model$residuals) 
+#Homoscedasticity of residuals
+ols_plot_resid_fit(model_causes_pm25$model, print_plot = TRUE)
+ols_test_f(model_causes_pm25$model)
+
+remove(causes_pm25, model_causes_pm25)
+
+## O3 ----
+
+causes_o3 <- causes %>% select(-c(Country, no2_avg, pm10_avg, pm25_avg)) %>% na.omit()
+
+# take log of o3
+par(mfrow = c(2,3))
+hist(causes_o3$o3_avg, xlab = "O3 / [ug/m3]", main = "")
+boxplot(causes_o3$o3_avg, main = "avg_o3 distribution")
+qqnorm(causes_o3$o3_avg, main = "")
+qqline(causes_o3$o3_avg, col = "blue", lwd = 0.5)
+hist(log(causes_o3$o3_avg), xlab = "O3 / [ug/m3]", main = "")
+boxplot(log(causes_o3$o3_avg), main = "log(avg_o3) distribution")
+qqnorm(log(causes_o3$o3_avg), main = "")
+qqline(log(causes_o3$o3_avg), col = "blue", lwd = 0.5)
+
+causes_o3$o3_avg <- log(causes_o3$o3_avg)
+
+# all variables (F-test)
+model_ftest <- lm(o3_avg ~ ., data = causes_o3)
+summary(model_ftest)
+
+# Step-Down
+model_stepdown <- ols_step_backward_p(model_ftest,
+                                      prem = 0.05,
+                                      progress = TRUE,
+                                      details = TRUE)
+par(mfrow = c(1, 3))
+plot(model_stepdown$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepdown$rsquare, xlab = "Step", ylab = "R^2", main = "Step-down procedure O3", type = "b", col = "blue")
+plot(model_stepdown$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepdown$model)
+
+# Step-Up
+model_stepup <- ols_step_forward_p(model_ftest,
+                                   penter = 0.05,
+                                   progress = TRUE,
+                                   details = TRUE)
+
+par(mfrow = c(1, 3))
+plot(model_stepup$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepup$rsquare, xlab = "Step", ylab = "R^2", main = "Step-up procedure O3", type = "b", col = "blue")
+plot(model_stepup$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepup$model)
+
+# AIC and BIC
+AIC(model_ftest, model_stepdown$model, model_stepup$model)
+BIC(model_ftest, model_stepdown$model, model_stepup$model)
+
+# Step-down and step-up both give the same optimal model
+model_causes_o3 <- model_stepdown
+remove(model_ftest, model_stepdown, model_stepup)
+
+### Regression Diagnostic ----
+
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model_causes_o3$model$residuals, main = "", xlab = "O3 Residuals")
+qqnorm(model_causes_o3$model$residuals, main = "")
+qqline(model_causes_o3$model$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model_causes_o3$model$residuals) 
+#Homoscedasticity of residuals
+ols_plot_resid_fit(model_causes_o3$model, print_plot = TRUE)
+ols_test_f(model_causes_o3$model)
+
+remove(causes_o3, model_causes_o3)
+
+## NO2 ----
+
+causes_no2 <- causes %>% select(-c(Country, pm25_avg, o3_avg, pm10_avg)) %>% na.omit()
+
+# all variables (F-test)
+model_ftest <- lm(no2_avg ~ ., data = causes_no2)
+summary(model_ftest)
+
+# Step-Down
+model_stepdown <- ols_step_backward_p(model_ftest,
+                                      prem = 0.05,
+                                      progress = TRUE,
+                                      details = TRUE)
+par(mfrow = c(1, 3))
+plot(model_stepdown$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepdown$rsquare, xlab = "Step", ylab = "R^2", main = "Step-down procedure NO2", type = "b", col = "blue")
+plot(model_stepdown$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepdown$model)
+
+# Step-Up
+model_stepup <- ols_step_forward_p(model_ftest,
+                                   penter = 0.05,
+                                   progress = TRUE,
+                                   details = TRUE)
+
+par(mfrow = c(1, 3))
+plot(model_stepup$aic, xlab = "Step", ylab = "AIC", type = "b", col = "blue")
+plot(model_stepup$rsquare, xlab = "Step", ylab = "R^2", main = "Step-up procedure NO2", type = "b", col = "blue")
+plot(model_stepup$adjr, xlab = "Step", ylab = "Adjusted R^2", type = "b", col = "blue")
+
+summary(model_stepup$model)
+
+# AIC and BIC
+AIC(model_ftest, model_stepdown$model, model_stepup$model)
+BIC(model_ftest, model_stepdown$model, model_stepup$model)
+
+# Step-down and step-up both give the same optimal model
+model_causes_no2 <- model_stepdown
+remove(model_ftest, model_stepdown, model_stepup)
+
+### Regression Diagnostic ----
+
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model_causes_no2$model$residuals, main = "", xlab = "NO2 Residuals")
+qqnorm(model_causes_no2$model$residuals, main = "")
+qqline(model_causes_no2$model$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model_causes_no2$model$residuals) 
+#Homoscedasticity of residuals
+ols_plot_resid_fit(model_causes_no2$model, print_plot = TRUE)
+ols_test_f(model_causes_no2$model)
+
+remove(causes_no2, model_causes_no2)
+remove(causes, cor_causes)
+
 # Air Pollution Levels vs Effects ----
-##
+effects <- read_csv("data/cleaned/Europe-Effects.csv") %>% select(-1)
+
+# adding column with total average pollution in the air
+effects$total_avg <- effects$pm10_avg + effects$pm25_avg + effects$no2_avg + effects$o3_avg
+#quick inspection of its normality
+qqnorm(effects$total_avg)
+qqline(effects$total_avg)
+
+# taking log transformations just like in the "causes" part
+effects$pm10_avg <- log(effects$pm10_avg) 
+effects$o3_avg <- log(effects$o3_avg)
+
+#correlation matrix effects (converted to data frame)
+cor_causes <- effects %>% 
+  select(where(is.numeric)) %>%
+  cor(use = "pairwise.complete.obs") %>%
+  round(3) %>% 
+  as_tibble(rownames = "variable") %>% 
+  select(variable, pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg) %>% 
+  head(7)
+
+## Model----
+# Y = b1*log(pm10) + b2*pm2.5 + b3*no2 + b4*log(o3) + b5(pm10 + pm2.5 + no2 + o3) + e
+
+set1 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Total deaths per 1000 people`) %>% na.omit()
+model1 <- lm(`Total deaths per 1000 people` ~ ., data = set1)
+summary(model1)
+set2 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Birth mortality per 1000 live births`) %>% na.omit()
+model2 <- lm(`Birth mortality per 1000 live births` ~ ., data = set2)
+summary(model2)
+set3 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Life expectancy in years`) %>% na.omit()
+model3 <- lm(`Life expectancy in years` ~ ., data = set3)
+summary(model3)
+set4 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+model4 <- lm(`Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set4)
+summary(model4)
+set5 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+model5 <- lm(`Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set5)
+summary(model5)
+set6 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+model6 <- lm(`Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set6)
+summary(model6)
+set7 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+model7 <- lm(`Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set7)
+summary(model7)
+
+remove(set1, set2, set3, set4, set5, set6, set7)
+
+#creating summary table of the models
+models <- list(model1 = model1,
+               model2 = model2,
+               model3 = model3,
+               model4 = model4,
+               model5 = model5,
+               model6 = model6,
+               model7 = model7)
+
+summary <- purrr::map_df(models, broom::tidy, .id = "model") %>% 
+  mutate("Keep Covariate" = case_when(
+    p.value <= 0.05 ~ TRUE,
+    p.value > 0.05 ~ FALSE
+  )) %>% 
+  select(-c(std.error, statistic)) %>% 
+  rename("Y" = model,
+         "Covariate" = term,
+         "Coefficient" = estimate,
+         "p-value" = p.value)
+
+# model1 is perfect
+# model2 passes the F-test (so this model is better than nothing), but no covariates are useful at level 5%
+# model3 is perfect
+# model4 is perfect
+# model5 has only the no2_avg variable, but doesn't pass the f-test (let's try step-up)
+# model6 doesn't pass the F-test and has no relevant covariates
+# model7 is perfect
 
 
