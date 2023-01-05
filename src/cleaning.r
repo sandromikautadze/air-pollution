@@ -99,6 +99,18 @@ abline(h = 120, col = "red")
 boxplot(ita_no2$AirPollutionLevel, main = "NO2 [ug/m3]")
 abline(h = 40, col = "red")
 
+# Normality
+par(mfrow = c(2,2))
+qqnorm(ita_pm10$AirPollutionLevel, main = "PM10 [ug/m3]")
+qqline(ita_pm10$AirPollutionLevel, col = "blue")
+qqnorm(ita_pm25$AirPollutionLevel, main = "PM2.5 [ug/m3]")
+qqline(ita_pm25$AirPollutionLevel, col = "blue")
+qqnorm(ita_o3$AirPollutionLevel, main = "O3 [ug/m3]")
+qqline(ita_o3$AirPollutionLevel, col = "blue")
+qqnorm(ita_no2$AirPollutionLevel, main = "NO2 [ug/m3]")
+qqline(ita_no2$AirPollutionLevel, col = "blue")
+
+
 # classifying observation based on North, Center, South
 ita_pm10 <- ita_pm10 %>% mutate(
   Zone = derivedFactor(
