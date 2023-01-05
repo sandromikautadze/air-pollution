@@ -2,7 +2,8 @@
 
 library(tidyverse)
 library(broom) # tidy
-library(olsrr) 
+library(olsrr)
+library(DataExplorer)
 
 # HP Testing ----
 # Is there enough statistical evidence to show that Italy's pollution levels
@@ -114,6 +115,8 @@ remove(summary_italy, summary_no2, summary_o3, summary_pm10, summary_pm25)
 
 # importing cleaned data
 causes <- read_csv("data/cleaned/Europe-Causes.csv") %>% select(-1)
+
+plot_missing(causes)
 
 #correlation matrix causes (converted to data frame)
 cor_causes <- causes %>% 
@@ -388,6 +391,8 @@ effects$total_avg <- effects$pm10_avg + effects$pm25_avg + effects$no2_avg + eff
 #quick inspection of its normality
 qqnorm(effects$total_avg)
 qqline(effects$total_avg)
+
+plot_missing(effects)
 
 # taking log transformations just like in the "causes" part
 effects$pm10_avg <- log(effects$pm10_avg) 

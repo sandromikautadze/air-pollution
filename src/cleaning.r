@@ -272,8 +272,6 @@ boxplot(avg_final$no2_avg, main = "Air Pollution NO2")
 qqnorm(avg_final$no2_avg, main = "")
 qqline(avg_final$no2_avg, col = "blue", lwd = 0.5)
 
-# try box cox with PM10 and O3
-
 # importing Causes ----
 causes_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
                      sheet = "causes")
