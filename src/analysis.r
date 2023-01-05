@@ -124,7 +124,6 @@ cor_causes <- causes %>%
   select(variable, pm10_avg, pm25_avg, o3_avg, no2_avg) %>% 
   head(10)
 
-
 # Linear Regression
 
 ## PM10 ----
@@ -144,13 +143,16 @@ qqline(log(causes_pm10$pm10_avg), col = "blue", lwd = 0.5)
 
 causes_pm10$pm10_avg <- log(causes_pm10$pm10_avg)
 
+# log(pm10) = b1*x1 + ...
+
+
 # all variables (F-test)
 model_ftest <- lm(pm10_avg ~ ., data = causes_pm10)
 summary(model_ftest)
 
 # Step-Down
-model_stepdown <- ols_step_backward_p(model_ftest,
-                                      prem = 0.05,
+model_stepdown <- ols_step_backward_aic(model_ftest,
+                                      #prem = 0.05,
                                       progress = TRUE,
                                       details = TRUE)
 par(mfrow = c(1, 3))
@@ -193,7 +195,6 @@ mean(model_causes_pm10$model$residuals)
 #Homoscedasticity of residuals
 ols_plot_resid_fit(model_causes_pm10$model, print_plot = TRUE)
 ols_test_f(model_causes_pm10$model)
-# https://olsrr.rsquaredacademy.com/articles/heteroskedasticity.html#f-test
 
 remove(causes_pm10, model_causes_pm10)
 
@@ -393,7 +394,7 @@ effects$pm10_avg <- log(effects$pm10_avg)
 effects$o3_avg <- log(effects$o3_avg)
 
 #correlation matrix effects (converted to data frame)
-cor_causes <- effects %>% 
+cor_effects <- effects %>% 
   select(where(is.numeric)) %>%
   cor(use = "pairwise.complete.obs") %>%
   round(3) %>% 
@@ -452,8 +453,92 @@ summary <- purrr::map_df(models, broom::tidy, .id = "model") %>%
 # model2 passes the F-test (so this model is better than nothing), but no covariates are useful at level 5%
 # model3 is perfect
 # model4 is perfect
-# model5 has only the no2_avg variable, but doesn't pass the f-test (let's try step-up)
+# model5 has only the no2_avg variable, but doesn't pass the f-test
 # model6 doesn't pass the F-test and has no relevant covariates
 # model7 is perfect
 
+# Diagnostic
 
+# Model1
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model1$residuals, main = "", xlab = "Model1 Residuals")
+qqnorm(model1$residuals, main = "")
+qqline(model1$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model1$residuals) 
+#Homoscedasticity of residuals
+plot(model1$fitted.values, model1$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Model2
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model2$residuals, main = "", xlab = "Model2 Residuals")
+qqnorm(model2$residuals, main = "")
+qqline(model2$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model2$residuals) 
+#Homoscedasticity of residuals
+plot(model2$fitted.values, model4$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Model3
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model3$residuals, main = "", xlab = "Model3 Residuals")
+qqnorm(model3$residuals, main = "")
+qqline(model3$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model3$residuals) 
+#Homoscedasticity of residuals
+plot(model3$fitted.values, model3$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Model4
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model4$residuals, main = "", xlab = "Model4 Residuals")
+qqnorm(model4$residuals, main = "")
+qqline(model4$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model4$residuals) 
+#Homoscedasticity of residuals
+plot(model4$fitted.values, model4$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Model5
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model5$residuals, main = "", xlab = "Model5 Residuals")
+qqnorm(model5$residuals, main = "")
+qqline(model5$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model5$residuals) 
+#Homoscedasticity of residuals
+plot(model5$fitted.values, model5$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Model6
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model6$residuals, main = "", xlab = "Model6 Residuals")
+qqnorm(model6$residuals, main = "")
+qqline(model6$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model6$residuals) 
+#Homoscedasticity of residuals
+plot(model6$fitted.values, model6$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Model7
+# Normality of residuals
+par(mfrow = c(1,2))
+hist(model7$residuals, main = "", xlab = "Model7 Residuals")
+qqnorm(model7$residuals, main = "")
+qqline(model7$residuals, col = "blue", lwd = 0.5)
+# Mean Zero check
+mean(model7$residuals) 
+#Homoscedasticity of residuals
+plot(model7$fitted.values, model7$res, xlab = "Fitted", ylab = "Residuals")
+abline(h = 0, col = "red")
