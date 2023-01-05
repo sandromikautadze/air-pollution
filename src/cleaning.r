@@ -91,9 +91,13 @@ ita_no2 <- ita_no2 %>%
 # Distribution of Air Pollution in Italy ----------
 par(mfrow = c(2,2))
 boxplot(ita_pm10$AirPollutionLevel, main = "PM10 [ug/m3]")
+abline(h = 50, col = "red")
 boxplot(ita_pm25$AirPollutionLevel, main = "PM2.5 [ug/m3]")
+abline(h = 25, col = "red")
 boxplot(ita_o3$AirPollutionLevel, main = "O3 [ug/m3]")
+abline(h = 120, col = "red")
 boxplot(ita_no2$AirPollutionLevel, main = "NO2 [ug/m3]")
+abline(h = 40, col = "red")
 
 # classifying observation based on North, Center, South
 ita_pm10 <- ita_pm10 %>% mutate(
@@ -132,6 +136,56 @@ ita_o3 <- ita_o3 %>% mutate(
     .default = 0
   )
 )
+
+# Distribution of Air Pollution in Italy per Zone ----------
+# North
+north_pm10 <- ita_pm10 %>% filter(Zone == "North")
+north_pm25 <- ita_pm25 %>% filter(Zone == "North")
+north_o3 <- ita_o3 %>% filter(Zone == "North")
+north_no2 <- ita_no2 %>% filter(Zone == "North")
+par(mfrow = c(2,2))
+boxplot(north_pm10$AirPollutionLevel, main = "North PM10 [ug/m3]")
+abline(h = 50, col = "red")
+boxplot(north_pm25$AirPollutionLevel, main = "North PM2.5 [ug/m3]")
+abline(h = 25, col = "red")
+boxplot(north_o3$AirPollutionLevel, main = "North O3 [ug/m3]")
+abline(h = 120, col = "red")
+boxplot(north_no2$AirPollutionLevel, main = "North NO2 [ug/m3]")
+abline(h = 40, col = "red")
+remove(north_no2, north_o3, north_pm10, north_pm25)
+
+# Center
+cent_pm10 <- ita_pm10 %>% filter(Zone == "Center")
+cent_pm25 <- ita_pm25 %>% filter(Zone == "Center")
+cent_o3 <- ita_o3 %>% filter(Zone == "Center")
+cent_no2 <- ita_no2 %>% filter(Zone == "Center")
+par(mfrow = c(2,2))
+boxplot(cent_pm10$AirPollutionLevel, main = "Center PM10 [ug/m3]")
+abline(h = 50, col = "red")
+boxplot(cent_pm25$AirPollutionLevel, main = "Center PM2.5 [ug/m3]", ylim = c(4, 27))
+abline(h = 25, col = "red")
+boxplot(cent_o3$AirPollutionLevel, main = "Center O3 [ug/m3]")
+abline(h = 120, col = "red")
+boxplot(cent_no2$AirPollutionLevel, main = "Center NO2 [ug/m3]")
+abline(h = 40, col = "red")
+remove(cent_no2, cent_o3, cent_pm10, cent_pm25)
+
+# Center
+south_pm10 <- ita_pm10 %>% filter(Zone == "South")
+south_pm25 <- ita_pm25 %>% filter(Zone == "South")
+south_o3 <- ita_o3 %>% filter(Zone == "South")
+south_no2 <- ita_no2 %>% filter(Zone == "South")
+par(mfrow = c(2,2))
+boxplot(south_pm10$AirPollutionLevel, main = "South PM10 [ug/m3]")
+abline(h = 50, col = "red")
+boxplot(south_pm25$AirPollutionLevel, main = "South PM2.5 [ug/m3]", ylim = c(4,27))
+abline(h = 25, col = "red")
+boxplot(south_o3$AirPollutionLevel, main = "South O3 [ug/m3]")
+abline(h = 120, col = "red")
+boxplot(south_no2$AirPollutionLevel, main = "South NO2 [ug/m3]")
+abline(h = 40, col = "red")
+remove(south_no2, south_o3, south_pm10, south_pm25)
+
 
 ## PLOT POLLUTION FOR EACH POLLUTANT ---------------
 
