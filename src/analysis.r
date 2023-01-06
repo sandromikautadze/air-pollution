@@ -5,9 +5,7 @@ library(broom) # tidy
 library(olsrr)
 library(DataExplorer)
 
-# HP Testing ----
-# Is there enough statistical evidence to show that Italy's pollution levels
-# exceed the EU guidelines? What about the North, Center and South of Italy?
+# TESTING - Questions 1 and 2 ---- 
 
 # importing cleaned data
 PM10 <- read_csv("data/cleaned/Ita-PM10.csv") %>% select(-1)
@@ -16,9 +14,9 @@ O3 <- read_csv("data/cleaned/Ita-O3.csv") %>% select(-1)
 NO2 <- read_csv("data/cleaned/Ita-NO2.csv") %>% select(-1)
 
 # Let mu0 be the EU reference guideline for a specific pollutant 
-# H0: mu <= mu0 vs H1 : mu > mu0, T-test, alpha0 = 0.05
+# H0: mu < mu0 vs H1 : mu >= mu0, T-test, alpha0 = 0.05
 
-# Entire Italy 
+## Entire Italy - Question 1 ----
 test <- function(df, mu0){
   tt <- t.test(df$AirPollutionLevel,
          alternative = "greater",
@@ -39,7 +37,7 @@ summary_italy <- cbind(pollutant,
 
 remove(tt_pm10, tt_pm25, tt_o3, tt_no2)
 
-# Northern, Central, Southern Italy for each pollutant
+## Northern, Central, Southern Italy for each pollutant - Question 2 ----
 
 # PM10
 pm10_north <- PM10 %>% filter(Zone == "North")
@@ -109,16 +107,18 @@ remove(tt_no2_north, tt_no2_center, tt_no2_south, no2_north, no2_center, no2_sou
 remove(summary_italy, summary_no2, summary_o3, summary_pm10, summary_pm25)
 
 
-#------------------------REGRESSIONS
+# REGRESSIONS - Questions 3 and 4 ----
 
-# Causes vs Air Pollution Levels ----
+## Causes vs Air Pollution Levels - Question 3 ----
+
+# pollutant = b1*x1 + ... + bn*xn + e where the bi are the coefficients and the xi the causes
 
 # importing cleaned data
 causes <- read_csv("data/cleaned/Europe-Causes.csv") %>% select(-1)
 
 plot_missing(causes)
 
-#correlation matrix causes (converted to data frame)
+# correlation matrix causes (converted to data frame)
 cor_causes <- causes %>% 
   select(where(is.numeric)) %>%
   cor(use = "pairwise.complete.obs") %>%
@@ -129,33 +129,19 @@ cor_causes <- causes %>%
 
 # Linear Regression
 
-## PM10 ----
+### PM10 ----
 # remove missing values and select main columns
 causes_pm10 <- causes %>% select(-c(Country, no2_avg, o3_avg, pm25_avg)) %>% na.omit()
 
-# take log of pm10
-par(mfrow = c(2,3))
-hist(causes_pm10$pm10_avg, xlab = "PM10 / [ug/m3]", main = "")
-boxplot(causes_pm10$pm10_avg, main = "avg_pm10 distribution")
-qqnorm(causes_pm10$pm10_avg, main = "")
-qqline(causes_pm10$pm10_avg, col = "blue", lwd = 0.5)
-hist(log(causes_pm10$pm10_avg), xlab = "PM10 / [ug/m3]", main = "")
-boxplot(log(causes_pm10$pm10_avg), main = "log(avg_pm10) distribution")
-qqnorm(log(causes_pm10$pm10_avg), main = "")
-qqline(log(causes_pm10$pm10_avg), col = "blue", lwd = 0.5)
-
-causes_pm10$pm10_avg <- log(causes_pm10$pm10_avg)
-
-# log(pm10) = b1*x1 + ...
-
+# pm10 = b1*x1 + ... + b10*x10
 
 # all variables (F-test)
 model_ftest <- lm(pm10_avg ~ ., data = causes_pm10)
 summary(model_ftest)
 
 # Step-Down
-model_stepdown <- ols_step_backward_aic(model_ftest,
-                                      #prem = 0.05,
+model_stepdown <- ols_step_backward_p(model_ftest,
+                                      prem = 0.05,
                                       progress = TRUE,
                                       details = TRUE)
 par(mfrow = c(1, 3))
@@ -186,7 +172,7 @@ BIC(model_ftest, model_stepdown$model, model_stepup$model)
 model_causes_pm10 <- model_stepdown
 remove(model_ftest, model_stepdown, model_stepup)
 
-### Regression Diagnostic ----
+#### Regression Diagnostic ----
 
 # Normality of residuals
 par(mfrow = c(1,2))
@@ -194,14 +180,14 @@ hist(model_causes_pm10$model$residuals, main = "", xlab = "PM10 Residuals")
 qqnorm(model_causes_pm10$model$residuals, main = "")
 qqline(model_causes_pm10$model$residuals, col = "blue", lwd = 0.5)
 # Mean Zero check
-mean(model_causes_pm10$model$residuals) 
+mean(model_causes_pm10$model$residuals) # -3e-16
 #Homoscedasticity of residuals
 ols_plot_resid_fit(model_causes_pm10$model, print_plot = TRUE)
-ols_test_f(model_causes_pm10$model)
+ols_test_f(model_causes_pm10$model) # Var is homogeneous
 
 remove(causes_pm10, model_causes_pm10)
 
-## PM2.5 ----
+### PM2.5 ----
 
 causes_pm25 <- causes %>% select(-c(Country, no2_avg, o3_avg, pm10_avg)) %>% na.omit()
 
@@ -242,7 +228,7 @@ BIC(model_ftest, model_stepdown$model, model_stepup$model)
 model_causes_pm25 <- model_stepdown
 remove(model_ftest, model_stepdown, model_stepup)
 
-### Regression Diagnostic ----
+#### Regression Diagnostic ----
 
 # Normality of residuals
 par(mfrow = c(1,2))
@@ -250,29 +236,16 @@ hist(model_causes_pm25$model$residuals, main = "", xlab = "PM2.5 Residuals")
 qqnorm(model_causes_pm25$model$residuals, main = "")
 qqline(model_causes_pm25$model$residuals, col = "blue", lwd = 0.5)
 # Mean Zero check
-mean(model_causes_pm25$model$residuals) 
+mean(model_causes_pm25$model$residuals)  # 2.3e-16
 #Homoscedasticity of residuals
 ols_plot_resid_fit(model_causes_pm25$model, print_plot = TRUE)
-ols_test_f(model_causes_pm25$model)
+ols_test_f(model_causes_pm25$model) # Var is not homogeneous (outlier?)
 
 remove(causes_pm25, model_causes_pm25)
 
-## O3 ----
+### O3 ----
 
 causes_o3 <- causes %>% select(-c(Country, no2_avg, pm10_avg, pm25_avg)) %>% na.omit()
-
-# take log of o3
-par(mfrow = c(2,3))
-hist(causes_o3$o3_avg, xlab = "O3 / [ug/m3]", main = "")
-boxplot(causes_o3$o3_avg, main = "avg_o3 distribution")
-qqnorm(causes_o3$o3_avg, main = "")
-qqline(causes_o3$o3_avg, col = "blue", lwd = 0.5)
-hist(log(causes_o3$o3_avg), xlab = "O3 / [ug/m3]", main = "")
-boxplot(log(causes_o3$o3_avg), main = "log(avg_o3) distribution")
-qqnorm(log(causes_o3$o3_avg), main = "")
-qqline(log(causes_o3$o3_avg), col = "blue", lwd = 0.5)
-
-causes_o3$o3_avg <- log(causes_o3$o3_avg)
 
 # all variables (F-test)
 model_ftest <- lm(o3_avg ~ ., data = causes_o3)
@@ -311,7 +284,7 @@ BIC(model_ftest, model_stepdown$model, model_stepup$model)
 model_causes_o3 <- model_stepdown
 remove(model_ftest, model_stepdown, model_stepup)
 
-### Regression Diagnostic ----
+#### Regression Diagnostic ----
 
 # Normality of residuals
 par(mfrow = c(1,2))
@@ -319,14 +292,14 @@ hist(model_causes_o3$model$residuals, main = "", xlab = "O3 Residuals")
 qqnorm(model_causes_o3$model$residuals, main = "")
 qqline(model_causes_o3$model$residuals, col = "blue", lwd = 0.5)
 # Mean Zero check
-mean(model_causes_o3$model$residuals) 
+mean(model_causes_o3$model$residuals) #1.7e-16
 #Homoscedasticity of residuals
 ols_plot_resid_fit(model_causes_o3$model, print_plot = TRUE)
-ols_test_f(model_causes_o3$model)
+ols_test_f(model_causes_o3$model) # Var is not homogeneous
 
 remove(causes_o3, model_causes_o3)
 
-## NO2 ----
+### NO2 ----
 
 causes_no2 <- causes %>% select(-c(Country, pm25_avg, o3_avg, pm10_avg)) %>% na.omit()
 
@@ -367,7 +340,7 @@ BIC(model_ftest, model_stepdown$model, model_stepup$model)
 model_causes_no2 <- model_stepdown
 remove(model_ftest, model_stepdown, model_stepup)
 
-### Regression Diagnostic ----
+#### Regression Diagnostic ----
 
 # Normality of residuals
 par(mfrow = c(1,2))
@@ -375,10 +348,10 @@ hist(model_causes_no2$model$residuals, main = "", xlab = "NO2 Residuals")
 qqnorm(model_causes_no2$model$residuals, main = "")
 qqline(model_causes_no2$model$residuals, col = "blue", lwd = 0.5)
 # Mean Zero check
-mean(model_causes_no2$model$residuals) 
+mean(model_causes_no2$model$residuals)  #-1.8e-16
 #Homoscedasticity of residuals
 ols_plot_resid_fit(model_causes_no2$model, print_plot = TRUE)
-ols_test_f(model_causes_no2$model)
+ols_test_f(model_causes_no2$model) # Var is homogenous
 
 remove(causes_no2, model_causes_no2)
 remove(causes, cor_causes)
@@ -386,17 +359,7 @@ remove(causes, cor_causes)
 # Air Pollution Levels vs Effects ----
 effects <- read_csv("data/cleaned/Europe-Effects.csv") %>% select(-1)
 
-# adding column with total average pollution in the air
-effects$total_avg <- effects$pm10_avg + effects$pm25_avg + effects$no2_avg + effects$o3_avg
-#quick inspection of its normality
-qqnorm(effects$total_avg)
-qqline(effects$total_avg)
-
 plot_missing(effects)
-
-# taking log transformations just like in the "causes" part
-effects$pm10_avg <- log(effects$pm10_avg) 
-effects$o3_avg <- log(effects$o3_avg)
 
 #correlation matrix effects (converted to data frame)
 cor_effects <- effects %>% 
@@ -408,27 +371,27 @@ cor_effects <- effects %>%
   head(7)
 
 ## Model----
-# Y = b1*log(pm10) + b2*pm2.5 + b3*no2 + b4*log(o3) + b5(pm10 + pm2.5 + no2 + o3) + e
+# Y = b1*pm10 + b2*pm2.5 + b3*no2 + b4*o3 + e where Y is the effect due to pollution
 
-set1 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Total deaths per 1000 people`) %>% na.omit()
+set1 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Total deaths per 1000 people`) %>% na.omit()
 model1 <- lm(`Total deaths per 1000 people` ~ ., data = set1)
 summary(model1)
-set2 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Birth mortality per 1000 live births`) %>% na.omit()
+set2 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Birth mortality per 1000 live births`) %>% na.omit()
 model2 <- lm(`Birth mortality per 1000 live births` ~ ., data = set2)
 summary(model2)
-set3 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Life expectancy in years`) %>% na.omit()
+set3 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg,`Life expectancy in years`) %>% na.omit()
 model3 <- lm(`Life expectancy in years` ~ ., data = set3)
 summary(model3)
-set4 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+set4 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
 model4 <- lm(`Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set4)
 summary(model4)
-set5 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+set5 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
 model5 <- lm(`Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set5)
 summary(model5)
-set6 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+set6 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
 model6 <- lm(`Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set6)
 summary(model6)
-set7 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg, `Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
+set7 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg,`Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
 model7 <- lm(`Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set7)
 summary(model7)
 
@@ -454,13 +417,13 @@ summary <- purrr::map_df(models, broom::tidy, .id = "model") %>%
          "Coefficient" = estimate,
          "p-value" = p.value)
 
-# model1 is perfect
-# model2 passes the F-test (so this model is better than nothing), but no covariates are useful at level 5%
-# model3 is perfect
-# model4 is perfect
-# model5 has only the no2_avg variable, but doesn't pass the f-test
-# model6 doesn't pass the F-test and has no relevant covariates
-# model7 is perfect
+# model1: ftest 0.058 pvalue; pm10, pm25 and intercept are significant at level 0.05
+# model2: ftest 2e-04 pvalue; o3, no2 are significant at 0.05
+# model3: ftest 0.002 pvalue; o3 and intercept are significant at 0.05 
+# model4: ftest 0.087 pvalue; intercept is significant at 0.05
+# model5: ftest 0.086 pvalue; no2 is significant at 0.05
+# model6: ftest 0.21 pvalue; intercept is significant at 0.05
+# model7: ftest 0.035 pvalue; pm10, pm25 are significant at 0.05
 
 # Diagnostic
 
@@ -471,7 +434,7 @@ hist(model1$residuals, main = "", xlab = "Model1 Residuals")
 qqnorm(model1$residuals, main = "")
 qqline(model1$residuals, col = "blue", lwd = 0.5)
 # Mean Zero check
-mean(model1$residuals) 
+mean(model1$residuals) # -1e-16
 #Homoscedasticity of residuals
 plot(model1$fitted.values, model1$res, xlab = "Fitted", ylab = "Residuals")
 abline(h = 0, col = "red")
