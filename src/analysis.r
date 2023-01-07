@@ -367,7 +367,7 @@ cor_effects <- effects %>%
   cor(use = "pairwise.complete.obs") %>%
   round(3) %>% 
   as_tibble(rownames = "variable") %>% 
-  select(variable, pm10_avg, pm25_avg, o3_avg, no2_avg, total_avg) %>% 
+  select(variable, pm10_avg, pm25_avg, o3_avg, no2_avg) %>% 
   head(7)
 
 ## Model----
