@@ -182,7 +182,7 @@ boxplot(cent_no2$AirPollutionLevel, main = "Center NO2 [ug/m3]")
 abline(h = 40, col = "red")
 remove(cent_no2, cent_o3, cent_pm10, cent_pm25)
 
-# Center
+# South
 south_pm10 <- ita_pm10 %>% filter(Zone == "South")
 south_pm25 <- ita_pm25 %>% filter(Zone == "South")
 south_o3 <- ita_o3 %>% filter(Zone == "South")
@@ -239,8 +239,9 @@ write.csv(ita_no2, "data/cleaned/Ita-NO2.csv")
 write.csv(ita_pm25, "data/cleaned/Ita-PM25.csv")
 
 remove(ita_pm10, ita_pm25, ita_o3, ita_no2)
+remove(change_col)
 
-# Causes and Effects Data -----
+# Causes Data -----
 
 # for each country we calculate the average air pollution level
 avg_pollution_level <- function(df){
@@ -285,8 +286,8 @@ qqnorm(avg_final$no2_avg, main = "")
 qqline(avg_final$no2_avg, col = "blue", lwd = 0.5)
 
 # importing Causes ----
-causes_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
-                     sheet = "causes")
+causes_nonclean <- read_excel("data/GS's Causes of Air Pollution.xlsx",
+                              sheet = "causes")
 
 # changing Slovak Republic to Slovakia in causes to match to avg_final row name
 causes_nonclean$Country[causes_nonclean$Country == "Slovak Republic"] <- "Slovakia"
@@ -299,12 +300,3 @@ causes$`GDP per capita, PPP (current  international $)`[is.na(causes$`GDP per ca
 
 write.csv(causes, "data/cleaned/Europe-Causes.csv")
 remove(causes, cor_causes)
-
-# importing Effects ----
-effects_nonclean <- read_excel("data/GS's Causes and Consequences of Air Pollution.xlsx",
-                              sheet = "consequences")
-effects <- merge(effects_nonclean, avg_final, by = "Country")
-remove(effects_nonclean, avg_final)
-
-write.csv(effects, "data/cleaned/Europe-Effects.csv")
-remove(effects, cor_effects)

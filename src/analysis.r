@@ -107,9 +107,9 @@ remove(tt_no2_north, tt_no2_center, tt_no2_south, no2_north, no2_center, no2_sou
 remove(summary_italy, summary_no2, summary_o3, summary_pm10, summary_pm25)
 
 
-# REGRESSIONS - Questions 3 and 4 ----
+# REGRESSIONS - Questions 3 ----
 
-## Causes vs Air Pollution Levels - Question 3 ----
+## Causes vs Air Pollution Levels
 
 # pollutant = b1*x1 + ... + bn*xn + e where the bi are the coefficients and the xi the causes
 
@@ -133,7 +133,7 @@ cor_causes <- causes %>%
 # remove missing values and select main columns
 causes_pm10 <- causes %>% select(-c(Country, no2_avg, o3_avg, pm25_avg)) %>% na.omit()
 
-# pm10 = b1*x1 + ... + b10*x10
+# pm10 = b1*x1 + ... + b10*x10 + e
 
 # all variables (F-test)
 model_ftest <- lm(pm10_avg ~ ., data = causes_pm10)
@@ -185,7 +185,7 @@ mean(model_causes_pm10$model$residuals) # -3e-16
 ols_plot_resid_fit(model_causes_pm10$model, print_plot = TRUE)
 ols_test_f(model_causes_pm10$model) # Var is homogeneous
 
-remove(causes_pm10, model_causes_pm10)
+remove(causes_pm10)
 
 ### PM2.5 ----
 
@@ -241,7 +241,7 @@ mean(model_causes_pm25$model$residuals)  # 2.3e-16
 ols_plot_resid_fit(model_causes_pm25$model, print_plot = TRUE)
 ols_test_f(model_causes_pm25$model) # Var is not homogeneous (outlier?)
 
-remove(causes_pm25, model_causes_pm25)
+remove(causes_pm25)
 
 ### O3 ----
 
@@ -297,7 +297,7 @@ mean(model_causes_o3$model$residuals) #1.7e-16
 ols_plot_resid_fit(model_causes_o3$model, print_plot = TRUE)
 ols_test_f(model_causes_o3$model) # Var is not homogeneous
 
-remove(causes_o3, model_causes_o3)
+remove(causes_o3)
 
 ### NO2 ----
 
@@ -353,58 +353,14 @@ mean(model_causes_no2$model$residuals)  #-1.8e-16
 ols_plot_resid_fit(model_causes_no2$model, print_plot = TRUE)
 ols_test_f(model_causes_no2$model) # Var is homogenous
 
-remove(causes_no2, model_causes_no2)
+remove(causes_no2)
 remove(causes, cor_causes)
 
-# Air Pollution Levels vs Effects ----
-effects <- read_csv("data/cleaned/Europe-Effects.csv") %>% select(-1)
-
-plot_missing(effects)
-
-#correlation matrix effects (converted to data frame)
-cor_effects <- effects %>% 
-  select(where(is.numeric)) %>%
-  cor(use = "pairwise.complete.obs") %>%
-  round(3) %>% 
-  as_tibble(rownames = "variable") %>% 
-  select(variable, pm10_avg, pm25_avg, o3_avg, no2_avg) %>% 
-  head(7)
-
-## Model----
-# Y = b1*pm10 + b2*pm2.5 + b3*no2 + b4*o3 + e where Y is the effect due to pollution
-
-set1 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Total deaths per 1000 people`) %>% na.omit()
-model1 <- lm(`Total deaths per 1000 people` ~ ., data = set1)
-summary(model1)
-set2 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Birth mortality per 1000 live births`) %>% na.omit()
-model2 <- lm(`Birth mortality per 1000 live births` ~ ., data = set2)
-summary(model2)
-set3 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg,`Life expectancy in years`) %>% na.omit()
-model3 <- lm(`Life expectancy in years` ~ ., data = set3)
-summary(model3)
-set4 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
-model4 <- lm(`Deaths - Cardiovascular diseases - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set4)
-summary(model4)
-set5 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
-model5 <- lm(`Deaths - Lower respiratory infections - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set5)
-summary(model5)
-set6 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg, `Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
-model6 <- lm(`Deaths - Chronic respiratory diseases - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set6)
-summary(model6)
-set7 <- effects %>% select(pm10_avg, pm25_avg, o3_avg, no2_avg,`Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)`) %>% na.omit()
-model7 <- lm(`Deaths - Tracheal, bronchus, and lung cancer - Sex: Both - Age: All Ages (per 1000 people)` ~ ., data = set7)
-summary(model7)
-
-remove(set1, set2, set3, set4, set5, set6, set7)
-
 #creating summary table of the models
-models <- list(model1 = model1,
-               model2 = model2,
-               model3 = model3,
-               model4 = model4,
-               model5 = model5,
-               model6 = model6,
-               model7 = model7)
+models <- list("PM10" = model_causes_pm10$model,
+               "PM2.5" = model_causes_pm25$model,
+               "O3" = model_causes_o3$model,
+               "NO2" = model_causes_no2$model)
 
 summary <- purrr::map_df(models, broom::tidy, .id = "model") %>% 
   mutate("Keep Covariate" = case_when(
@@ -416,97 +372,3 @@ summary <- purrr::map_df(models, broom::tidy, .id = "model") %>%
          "Covariate" = term,
          "Coefficient" = estimate,
          "p-value" = p.value)
-
-# model1: ftest 0.058 pvalue; pm10, pm25 and intercept are significant at level 0.05
-# model2: ftest 2e-04 pvalue; o3, no2 are significant at 0.05
-# model3: ftest 0.002 pvalue; o3 and intercept are significant at 0.05 
-# model4: ftest 0.087 pvalue; intercept is significant at 0.05
-# model5: ftest 0.086 pvalue; no2 is significant at 0.05
-# model6: ftest 0.21 pvalue; intercept is significant at 0.05
-# model7: ftest 0.035 pvalue; pm10, pm25 are significant at 0.05
-
-# Diagnostic
-
-# Model1
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model1$residuals, main = "", xlab = "Model1 Residuals")
-qqnorm(model1$residuals, main = "")
-qqline(model1$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model1$residuals) # -1e-16
-#Homoscedasticity of residuals
-plot(model1$fitted.values, model1$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
-
-# Model2
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model2$residuals, main = "", xlab = "Model2 Residuals")
-qqnorm(model2$residuals, main = "")
-qqline(model2$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model2$residuals) 
-#Homoscedasticity of residuals
-plot(model2$fitted.values, model4$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
-
-# Model3
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model3$residuals, main = "", xlab = "Model3 Residuals")
-qqnorm(model3$residuals, main = "")
-qqline(model3$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model3$residuals) 
-#Homoscedasticity of residuals
-plot(model3$fitted.values, model3$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
-
-# Model4
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model4$residuals, main = "", xlab = "Model4 Residuals")
-qqnorm(model4$residuals, main = "")
-qqline(model4$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model4$residuals) 
-#Homoscedasticity of residuals
-plot(model4$fitted.values, model4$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
-
-# Model5
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model5$residuals, main = "", xlab = "Model5 Residuals")
-qqnorm(model5$residuals, main = "")
-qqline(model5$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model5$residuals) 
-#Homoscedasticity of residuals
-plot(model5$fitted.values, model5$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
-
-# Model6
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model6$residuals, main = "", xlab = "Model6 Residuals")
-qqnorm(model6$residuals, main = "")
-qqline(model6$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model6$residuals) 
-#Homoscedasticity of residuals
-plot(model6$fitted.values, model6$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
-
-# Model7
-# Normality of residuals
-par(mfrow = c(1,2))
-hist(model7$residuals, main = "", xlab = "Model7 Residuals")
-qqnorm(model7$residuals, main = "")
-qqline(model7$residuals, col = "blue", lwd = 0.5)
-# Mean Zero check
-mean(model7$residuals) 
-#Homoscedasticity of residuals
-plot(model7$fitted.values, model7$res, xlab = "Fitted", ylab = "Residuals")
-abline(h = 0, col = "red")
