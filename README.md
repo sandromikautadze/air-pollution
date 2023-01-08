@@ -10,7 +10,7 @@ This repository contains all the files for the project in *Mathematical Statisti
 
 * **output-graphics** contains all the images (plots, graphs, etc.) used in the project
     * **cleaning** contains the images used in the cleaning phase
-    * **analysis** contains two subfolders **causes** and **effects**, one for each part of the analysis, with the respective images
+    * **analysis** contains the subfolder **causes** with the respective images
 
 ## Authors
 [Sandro](https://github.com/sandromikautadze) and [Giovanni](https://github.com/giovanni-demuri)
